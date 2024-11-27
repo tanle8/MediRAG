@@ -1,0 +1,24 @@
+services:
+  fastapi:
+    build:
+      context: .  # Current directory
+      dockerfile: Dockerfile
+    container_name: my-rag-container-dev
+    ports:
+      - "80:80"
+    volumes:
+      - ./webapp:/webapp  # Mount code for live code updates
+      # - qdrant_data:/webapp/qdrant_storage  # For vector database persistence
+
+    environment:
+      - ENV=development
+    command: ["uvicorn", "webapp.main:app", "--host", "0.0.0.0", "--port", "80"]
+    networks:
+      - app_network
+
+volumes:
+  qdrant_data_dev: # Define the named volume (Development-specific data)
+
+networks:
+  app_network:
+    driver: bridge
