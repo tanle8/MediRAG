@@ -17,6 +17,7 @@ import logging
 import requests
 import json
 from dotenv import load_dotenv
+import pickle
 
 
 # Configure logging for better debugging and monitoring
@@ -33,6 +34,7 @@ LLM_TYPE = os.getenv('LLM_TYPE', 'local') # Default to local
 # Initialize global variables
 # Initialize SentenceTransformer model
 encoder = SentenceTransformer('all-MiniLM-L6-v2')
+
 # Initialize Qdrant client
 qdrant = QdrantClient(path="/webapp/qdrant_storage") # Using In-Memory Storage (location=":memory:") for a quick demo
 collection_name = "medqa_collection"
@@ -48,6 +50,22 @@ def load_data(sample_size=700):
 # Function to generate embeddings and load them into the vector database
 def initialize_vector_db(data):
     logger.info("Initializing vector database...")
+
+    # Define path to save/load precomputed embeddings
+    embeddings_path = "/webapp/embeddings.pkl"
+
+    # Check if embeddings are precomputed
+    if os.path.exists(embeddings_path):
+        logger.info("Loading precomputed embeddings from disk...")
+        with open(embeddings_path, 'rb') as f:
+            embeddings = pickle.load(f)
+    else:
+        # If not, compute embeddings, save them, and use them during the database initialization.
+        logger.info("Generating embeddings...")
+        embeddings = {doc['question']: encoder.encode(doc["question"]).tolist() for doc in data}
+        with open(embeddings_path, 'wb') as f:
+            pickle.dump(embeddings, f)
+        logger.info(f"Embeddings saved to {embeddings_path}")
 
     # Create collection if not exists
     if not qdrant.collection_exists(collection_name):
